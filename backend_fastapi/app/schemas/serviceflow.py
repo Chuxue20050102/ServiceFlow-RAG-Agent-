@@ -28,6 +28,8 @@ class AnalyzeResponse(BaseModel):
     status: str
     analyzed_count: int
     failed_count: int
+    total_count: int
+    progress_percent: int
 
 
 class TicketAnalysisResult(BaseModel):
@@ -80,3 +82,8 @@ class TicketReportResponse(BaseModel):
     report_id: int
     title: str
     content: str
+
+
+class KnowledgeSearchResponse(BaseModel):
+    query: str
+    matches: list[str]

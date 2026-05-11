@@ -15,9 +15,17 @@ from app.services.vector_service import search_rule_chunks
 class AnalysisRunResult:
     analyzed_count: int
     failed_count: int = 0
+    total_count: int = 0
+
+    @property
+    def progress_percent(self) -> int:
+        if self.total_count <= 0:
+            return 0
+        return min(100, round((self.analyzed_count / self.total_count) * 100))
 
 
 def get_analysis_status(db: Session, batch_id: int) -> AnalysisRunResult:
+    batch = db.get(TicketBatch, batch_id)
     analyses = list(
         db.scalars(
             select(TicketAnalysis)
@@ -26,7 +34,11 @@ def get_analysis_status(db: Session, batch_id: int) -> AnalysisRunResult:
         )
     )
     failed_count = sum(1 for item in analyses if not item.parse_success)
-    return AnalysisRunResult(analyzed_count=len(analyses), failed_count=failed_count)
+    return AnalysisRunResult(
+        analyzed_count=len(analyses),
+        failed_count=failed_count,
+        total_count=batch.total_count if batch else 0,
+    )
 
 
 def run_ticket_analysis(db: Session, batch_id: int) -> AnalysisRunResult:
@@ -55,7 +67,11 @@ def run_ticket_analysis(db: Session, batch_id: int) -> AnalysisRunResult:
 
     batch.status = "completed"
     db.commit()
-    return AnalysisRunResult(analyzed_count=len(tickets), failed_count=failed_count)
+    return AnalysisRunResult(
+        analyzed_count=len(tickets),
+        failed_count=failed_count,
+        total_count=batch.total_count,
+    )
 
 
 def analyze_single_ticket(content: str) -> TicketAnalysisResult:

@@ -21,6 +21,13 @@ export interface AnalyzeResponse {
   status: string
   analyzed_count: number
   failed_count: number
+  total_count: number
+  progress_percent: number
+}
+
+export interface KnowledgeSearchResponse {
+  query: string
+  matches: string[]
 }
 
 export interface TicketSummary {

@@ -721,6 +721,78 @@ tbody tr:hover { background: #fafbfc; }
   border-color: rgba(220, 38, 38, 0.2);
 }
 
+/* ===== Progress ===== */
+.progress-box {
+  display: grid;
+  gap: 8px;
+  margin-top: 16px;
+  margin-bottom: 16px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--bg);
+}
+
+.progress-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--ink-secondary);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.progress-track {
+  height: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #e8edf5;
+}
+
+.progress-track span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--accent);
+  transition: width 0.25s ease;
+}
+
+.progress-box p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+/* ===== Retrieval Preview ===== */
+.retrieval-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.retrieval-list article {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px 14px;
+  background: var(--bg);
+}
+
+.retrieval-list span {
+  display: inline-block;
+  margin-bottom: 6px;
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.retrieval-list p {
+  margin: 0;
+  color: var(--ink-secondary);
+  font-size: 13px;
+  line-height: 1.7;
+}
+
 /* ===== Success Panel ===== */
 .success-panel {
   border-color: rgba(31,146,84,0.2);

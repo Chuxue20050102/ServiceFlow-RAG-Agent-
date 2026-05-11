@@ -88,9 +88,10 @@ copy frontend_vue\.env.example frontend_vue\.env.local
 
 1. 打开前端页面 `http://127.0.0.1:5173`
 2. 在规则知识库页面上传 `samples/after_sales_rules.md`
-3. 在工单上传页面上传 `samples/tickets.csv`
-4. 点击 AI 分析，等待任务完成
-5. 查看统计图表、工单处理建议和 Agent Trace
+3. 使用“检索预览”测试 RAG 规则召回
+4. 在工单上传页面上传 `samples/tickets.csv`
+5. 点击 AI 分析，通过进度条等待任务完成
+6. 查看统计图表、工单处理建议和 Agent Trace
 
 ## API 概览
 
@@ -104,6 +105,7 @@ copy frontend_vue\.env.example frontend_vue\.env.local
 
 - `POST /knowledge/upload`：上传知识文档
 - `GET /knowledge`：知识文档列表
+- `GET /knowledge/search`：预览规则召回结果
 - `POST /tickets/upload`：上传工单批次
 - `POST /tickets/{batch_id}/analyze`：提交后台 AI 分析任务
 - `GET /tickets/{batch_id}/analyze/status`：查询 AI 分析进度

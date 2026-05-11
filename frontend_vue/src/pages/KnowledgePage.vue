@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import { listKnowledgeDocuments, uploadKnowledgeDocument } from '@/api/serviceflow'
+import { listKnowledgeDocuments, searchKnowledge, uploadKnowledgeDocument } from '@/api/serviceflow'
 import type { KnowledgeDocument } from '@/types/serviceflow'
 
 const documentName = ref('退款与支付处理规则')
@@ -10,6 +10,10 @@ const documents = ref<KnowledgeDocument[]>([])
 const loading = ref(false)
 const message = ref('')
 const messageType = ref<'success' | 'error'>('success')
+const searchQuery = ref('我付款了，但是会员一直没到账')
+const searchResults = ref<string[]>([])
+const searching = ref(false)
+const searchMessage = ref('')
 
 function onFileChange(event: Event) {
   const target = event.target as HTMLInputElement
@@ -38,6 +42,27 @@ async function submit() {
     messageType.value = 'error'
   } finally {
     loading.value = false
+  }
+}
+
+async function previewSearch() {
+  if (!searchQuery.value.trim()) {
+    searchMessage.value = '请输入要测试的工单问题。'
+    return
+  }
+
+  searching.value = true
+  searchMessage.value = ''
+  try {
+    const result = await searchKnowledge(searchQuery.value.trim())
+    searchResults.value = result.matches
+    searchMessage.value = result.matches.length
+      ? `命中 ${result.matches.length} 条规则片段。`
+      : '暂无匹配规则，请先上传知识文档。'
+  } catch (error) {
+    searchMessage.value = error instanceof Error ? error.message : '检索失败'
+  } finally {
+    searching.value = false
   }
 }
 
@@ -78,6 +103,25 @@ onMounted(refreshDocuments)
         {{ loading ? '处理中...' : '上传并切分' }}
       </button>
       <p v-if="message" class="message" :class="messageType">{{ message }}</p>
+    </section>
+
+    <section class="panel form-panel">
+      <h2>检索预览</h2>
+      <label>
+        测试工单问题
+        <input v-model="searchQuery" placeholder="输入一句用户问题，查看 RAG 命中的规则片段" />
+      </label>
+      <button class="secondary-button" :disabled="searching" @click="previewSearch">
+        <span v-if="searching" class="spinner"></span>
+        {{ searching ? '检索中...' : '测试规则召回' }}
+      </button>
+      <p v-if="searchMessage" class="message">{{ searchMessage }}</p>
+      <div v-if="searchResults.length" class="retrieval-list">
+        <article v-for="(item, index) in searchResults" :key="index">
+          <span>Top {{ index + 1 }}</span>
+          <p>{{ item }}</p>
+        </article>
+      </div>
     </section>
 
     <section class="panel">

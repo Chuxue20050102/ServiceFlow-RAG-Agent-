@@ -1,5 +1,6 @@
 import type {
   AnalyzeResponse,
+  KnowledgeSearchResponse,
   KnowledgeDocument,
   TicketBatch,
   TicketItem,
@@ -35,6 +36,10 @@ export function uploadKnowledgeDocument(
 
 export function listKnowledgeDocuments() {
   return request<KnowledgeDocument[]>('/knowledge')
+}
+
+export function searchKnowledge(query: string) {
+  return request<KnowledgeSearchResponse>(`/knowledge/search?query=${encodeURIComponent(query)}`)
 }
 
 export function uploadTicketBatch(batchName: string, file: File) {

@@ -1,10 +1,13 @@
-from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, UploadFile
+from pathlib import Path
+
+from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, Query, UploadFile
 from sqlalchemy.orm import Session
 
 from app.database.session import SessionLocal, get_db
 from app.models.serviceflow import TicketBatch
 from app.schemas.serviceflow import (
     AnalyzeResponse,
+    KnowledgeSearchResponse,
     KnowledgeDocumentResponse,
     TicketBatchResponse,
     TicketItemResponse,
@@ -27,9 +30,23 @@ from app.services.ticket_service import (
     list_ticket_items,
     upload_ticket_batch,
 )
+from app.services.vector_service import search_rule_chunks
 
 
 router = APIRouter()
+
+MAX_UPLOAD_SIZE = 10 * 1024 * 1024
+KNOWLEDGE_EXTENSIONS = {".txt", ".md"}
+TICKET_EXTENSIONS = {".csv", ".xls", ".xlsx"}
+
+
+def validate_upload_file(file: UploadFile, allowed_extensions: set[str]) -> None:
+    suffix = Path(file.filename or "").suffix.lower()
+    if suffix not in allowed_extensions:
+        allowed = ", ".join(sorted(allowed_extensions))
+        raise HTTPException(status_code=400, detail=f"Unsupported file type. Allowed: {allowed}")
+    if file.size is not None and file.size > MAX_UPLOAD_SIZE:
+        raise HTTPException(status_code=400, detail="File is too large. Max size is 10 MB.")
 
 
 @router.get("/ping")
@@ -44,12 +61,21 @@ def upload_knowledge(
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
 ):
-    return upload_knowledge_document(db, document_name, document_type, file)
+    validate_upload_file(file, KNOWLEDGE_EXTENSIONS)
+    try:
+        return upload_knowledge_document(db, document_name, document_type, file)
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
 
 
 @router.get("/knowledge", response_model=list[KnowledgeDocumentResponse])
 def get_knowledge_documents(db: Session = Depends(get_db)):
     return list_knowledge_documents(db)
+
+
+@router.get("/knowledge/search", response_model=KnowledgeSearchResponse)
+def search_knowledge(query: str = Query(..., min_length=2, max_length=500)):
+    return KnowledgeSearchResponse(query=query, matches=search_rule_chunks(query))
 
 
 @router.post("/tickets/upload", response_model=TicketBatchResponse)
@@ -58,7 +84,11 @@ def upload_tickets(
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
 ):
-    batch = upload_ticket_batch(db, batch_name, file)
+    validate_upload_file(file, TICKET_EXTENSIONS)
+    try:
+        batch = upload_ticket_batch(db, batch_name, file)
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
     return TicketBatchResponse(
         batch_id=batch.id,
         batch_name=batch.batch_name,
@@ -85,6 +115,8 @@ def analyze_tickets(
             status=batch.status,
             analyzed_count=result.analyzed_count,
             failed_count=result.failed_count,
+            total_count=result.total_count,
+            progress_percent=result.progress_percent,
         )
 
     batch.status = "processing"
@@ -96,6 +128,8 @@ def analyze_tickets(
         status=batch.status,
         analyzed_count=0,
         failed_count=0,
+        total_count=batch.total_count,
+        progress_percent=0,
     )
 
 
@@ -111,6 +145,8 @@ def get_analyze_status(batch_id: int, db: Session = Depends(get_db)):
         status=batch.status,
         analyzed_count=result.analyzed_count,
         failed_count=result.failed_count,
+        total_count=result.total_count,
+        progress_percent=result.progress_percent,
     )
 
 

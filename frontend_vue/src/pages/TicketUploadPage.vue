@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { analyzeTicketBatch, getAnalyzeStatus, uploadTicketBatch } from '@/api/serviceflow'
 import type { AnalyzeResponse, TicketBatch } from '@/types/serviceflow'
@@ -11,6 +11,9 @@ const batch = ref<TicketBatch | null>(null)
 const loading = ref(false)
 const message = ref('')
 const messageType = ref<'success' | 'error'>('success')
+const analysisStatus = ref<AnalyzeResponse | null>(null)
+
+const progressPercent = computed(() => analysisStatus.value?.progress_percent ?? 0)
 
 const sleep = (ms: number) => new Promise((resolve) => window.setTimeout(resolve, ms))
 
@@ -18,6 +21,7 @@ function onFileChange(event: Event) {
   const target = event.target as HTMLInputElement
   file.value = target.files?.[0] ?? null
   batch.value = null
+  analysisStatus.value = null
   message.value = ''
 }
 
@@ -38,6 +42,7 @@ async function upload() {
 async function uploadOnly() {
   loading.value = true
   message.value = ''
+  analysisStatus.value = null
   try {
     await upload()
   } catch (error) {
@@ -64,6 +69,7 @@ async function analyze() {
     message.value = 'AI 分析任务已开始，请稍等。'
     messageType.value = 'success'
     const started = await analyzeTicketBatch(currentBatch.batch_id)
+    analysisStatus.value = started
     await waitForAnalysis(currentBatch.batch_id, started)
     router.push(`/tickets/result/${currentBatch.batch_id}`)
   } catch (error) {
@@ -80,6 +86,7 @@ async function waitForAnalysis(batchId: number, initialStatus: AnalyzeResponse) 
     if (batch.value) {
       batch.value = { ...batch.value, status: status.status }
     }
+    analysisStatus.value = status
     message.value = `AI 分析中：已完成 ${status.analyzed_count} 条，失败 ${status.failed_count} 条。`
 
     if (status.status === 'completed') {
@@ -127,6 +134,19 @@ async function waitForAnalysis(batchId: number, initialStatus: AnalyzeResponse) 
           <span v-if="loading" class="spinner"></span>
           {{ loading ? '处理中...' : '上传并开始 AI 分析' }}
         </button>
+      </div>
+      <div v-if="analysisStatus" class="progress-box">
+        <div class="progress-meta">
+          <span>AI 分析进度</span>
+          <strong>{{ progressPercent }}%</strong>
+        </div>
+        <div class="progress-track">
+          <span :style="{ width: `${progressPercent}%` }"></span>
+        </div>
+        <p>
+          已完成 {{ analysisStatus.analyzed_count }} / {{ analysisStatus.total_count }} 条，
+          失败 {{ analysisStatus.failed_count }} 条，状态 {{ analysisStatus.status }}
+        </p>
       </div>
       <p v-if="message" class="message" :class="messageType">{{ message }}</p>
     </section>
