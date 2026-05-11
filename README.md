@@ -62,97 +62,35 @@ backend_fastapi/app/services/rag_service.py
 - 流式输出：批量工单分析更关注完整结果，所以暂未逐 token 返回
 - function calling：当前只需要固定 JSON 输出，后续可扩展为查询订单、支付流水、用户状态等工具调用
 
-## 4. 部署步骤说明
+## 4. 本地运行
 
-### 一键开发启动
-
-首次使用时，先根据示例文件准备环境变量：
+首次使用时，先准备环境变量：
 
 ```powershell
 copy backend_fastapi\.env.example backend_fastapi\.env
 copy frontend_vue\.env.example frontend_vue\.env.local
 ```
 
-填写后端 `.env` 里的模型 API 配置后，可以一键启动 MySQL、后端和前端：
+填写 `backend_fastapi/.env` 里的模型 API 配置后，一键启动 MySQL、后端和前端：
 
 ```powershell
 .\scripts\start-dev.ps1
 ```
 
-### 后端
-
-```powershell
-cd C:\HomeWork\agent\insightflow-agent\backend_fastapi
-py -m venv .venv
-.\.venv\Scripts\python.exe -m pip install -r requirements.txt
-```
-
-创建 `.env`：
-
-```env
-DATABASE_URL=mysql+pymysql://root:password@127.0.0.1:3307/serviceflow_agent
-UPLOAD_DIR=uploads
-VECTOR_STORE_DIR=vector_store
-OPENAI_API_KEY=your_api_key
-OPENAI_BASE_URL=https://your-openai-compatible-endpoint/v1
-OPENAI_MODEL=your-chat-model
-OPENAI_EMBEDDING_MODEL=your-embedding-model
-```
-
-启动：
-
-```powershell
-.\.venv\Scripts\python.exe -m uvicorn app.main:app --host 0.0.0.0 --port 8010
-```
-
-### 前端
-
-```powershell
-cd C:\HomeWork\agent\insightflow-agent\frontend_vue
-npm install
-```
-
-创建 `.env.local`：
-
-```env
-VITE_API_BASE_URL=http://127.0.0.1:8010/api/serviceflow
-```
-
-启动开发服务：
-
-```powershell
-npm run dev -- --host 0.0.0.0
-```
-
-生产构建：
-
-```powershell
-npm run build
-```
-
-### 端口
+本地端口：
 
 - EmoChat 后端：`8000`
 - ServiceFlow 后端：`8010`
 - ServiceFlow 前端：`5173`
 - ServiceFlow MySQL：`3307`
 
-### DNS / HTTPS
+## 5. 演示流程
 
-生产环境建议：
-
-- 前端域名：`serviceflow.example.com`
-- 后端 API 域名：`api.example.com`
-- DNS 中分别添加 A 记录，指向服务器公网 IP
-- 使用 Nginx 托管前端 `dist/`，并反向代理后端 `127.0.0.1:8010`
-- 使用 Certbot / Let's Encrypt 开启 HTTPS
-- HTTPS 上线后，前端 `VITE_API_BASE_URL` 应改为：
-
-```env
-VITE_API_BASE_URL=https://api.example.com/api/serviceflow
-```
-
-后端 CORS 也需要加入正式前端域名。
+1. 打开前端页面 `http://127.0.0.1:5173`
+2. 在规则知识库页面上传 `samples/after_sales_rules.md`
+3. 在工单上传页面上传 `samples/tickets.csv`
+4. 点击 AI 分析，等待任务完成
+5. 查看统计图表、工单处理建议和 Agent Trace
 
 ## API 概览
 
