@@ -1,0 +1,15 @@
+services:
+  serviceflow-mysql:
+    image: mysql:8.0
+    container_name: serviceflow-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: password
+      MYSQL_DATABASE: serviceflow_agent
+    ports:
+      - "3307:3306"
+    volumes:
+      - serviceflow_mysql_data:/var/lib/mysql
+
+volumes:
+  serviceflow_mysql_data:

@@ -17,6 +17,18 @@ class AnalysisRunResult:
     failed_count: int = 0
 
 
+def get_analysis_status(db: Session, batch_id: int) -> AnalysisRunResult:
+    analyses = list(
+        db.scalars(
+            select(TicketAnalysis)
+            .join(TicketItem)
+            .where(TicketItem.batch_id == batch_id)
+        )
+    )
+    failed_count = sum(1 for item in analyses if not item.parse_success)
+    return AnalysisRunResult(analyzed_count=len(analyses), failed_count=failed_count)
+
+
 def run_ticket_analysis(db: Session, batch_id: int) -> AnalysisRunResult:
     batch = db.get(TicketBatch, batch_id)
     if not batch:
@@ -230,4 +242,3 @@ def top_name(counter: Counter[str]) -> str:
     if not counter:
         return "暂无"
     return counter.most_common(1)[0][0]
-

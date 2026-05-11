@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { analyzeTicketBatch, uploadTicketBatch } from '@/api/serviceflow'
-import type { TicketBatch } from '@/types/serviceflow'
+import { analyzeTicketBatch, getAnalyzeStatus, uploadTicketBatch } from '@/api/serviceflow'
+import type { AnalyzeResponse, TicketBatch } from '@/types/serviceflow'
 
 const router = useRouter()
 const batchName = ref('2026年5月售后工单')
@@ -11,6 +11,8 @@ const batch = ref<TicketBatch | null>(null)
 const loading = ref(false)
 const message = ref('')
 const messageType = ref<'success' | 'error'>('success')
+
+const sleep = (ms: number) => new Promise((resolve) => window.setTimeout(resolve, ms))
 
 function onFileChange(event: Event) {
   const target = event.target as HTMLInputElement
@@ -59,9 +61,10 @@ async function analyze() {
     const currentBatch = batch.value ?? (await upload())
     if (!currentBatch) return
 
-    message.value = 'AI 正在分析工单，请稍等。'
+    message.value = 'AI 分析任务已开始，请稍等。'
     messageType.value = 'success'
-    await analyzeTicketBatch(currentBatch.batch_id)
+    const started = await analyzeTicketBatch(currentBatch.batch_id)
+    await waitForAnalysis(currentBatch.batch_id, started)
     router.push(`/tickets/result/${currentBatch.batch_id}`)
   } catch (error) {
     message.value = error instanceof Error ? error.message : '分析失败'
@@ -69,6 +72,28 @@ async function analyze() {
   } finally {
     loading.value = false
   }
+}
+
+async function waitForAnalysis(batchId: number, initialStatus: AnalyzeResponse) {
+  let status = initialStatus
+  for (let attempt = 0; attempt < 240; attempt += 1) {
+    if (batch.value) {
+      batch.value = { ...batch.value, status: status.status }
+    }
+    message.value = `AI 分析中：已完成 ${status.analyzed_count} 条，失败 ${status.failed_count} 条。`
+
+    if (status.status === 'completed') {
+      return
+    }
+    if (status.status === 'failed') {
+      throw new Error('AI 分析失败，请查看后端日志。')
+    }
+
+    await sleep(1500)
+    status = await getAnalyzeStatus(batchId)
+  }
+
+  throw new Error('AI 分析超时，请查看后端状态。')
 }
 </script>
 

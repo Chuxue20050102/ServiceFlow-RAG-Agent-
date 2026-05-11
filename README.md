@@ -64,6 +64,21 @@ backend_fastapi/app/services/rag_service.py
 
 ## 4. 部署步骤说明
 
+### 一键开发启动
+
+首次使用时，先根据示例文件准备环境变量：
+
+```powershell
+copy backend_fastapi\.env.example backend_fastapi\.env
+copy frontend_vue\.env.example frontend_vue\.env.local
+```
+
+填写后端 `.env` 里的模型 API 配置后，可以一键启动 MySQL、后端和前端：
+
+```powershell
+.\scripts\start-dev.ps1
+```
+
 ### 后端
 
 ```powershell
@@ -152,7 +167,8 @@ VITE_API_BASE_URL=https://api.example.com/api/serviceflow
 - `POST /knowledge/upload`：上传知识文档
 - `GET /knowledge`：知识文档列表
 - `POST /tickets/upload`：上传工单批次
-- `POST /tickets/{batch_id}/analyze`：批量 AI 分析
+- `POST /tickets/{batch_id}/analyze`：提交后台 AI 分析任务
+- `GET /tickets/{batch_id}/analyze/status`：查询 AI 分析进度
 - `GET /tickets/{batch_id}/summary`：统计汇总
 - `GET /tickets/{batch_id}/items`：工单分析明细
 - `POST /tickets/{batch_id}/report`：生成日报

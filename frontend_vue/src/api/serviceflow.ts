@@ -53,6 +53,10 @@ export function analyzeTicketBatch(batchId: number) {
   })
 }
 
+export function getAnalyzeStatus(batchId: number) {
+  return request<AnalyzeResponse>(`/tickets/${batchId}/analyze/status`)
+}
+
 export function getTicketSummary(batchId: number) {
   return request<TicketSummary>(`/tickets/${batchId}/summary`)
 }

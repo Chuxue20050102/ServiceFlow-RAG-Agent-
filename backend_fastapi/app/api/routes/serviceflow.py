@@ -1,7 +1,8 @@
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, UploadFile
 from sqlalchemy.orm import Session
 
-from app.database.session import get_db
+from app.database.session import SessionLocal, get_db
+from app.models.serviceflow import TicketBatch
 from app.schemas.serviceflow import (
     AnalyzeResponse,
     KnowledgeDocumentResponse,
@@ -16,6 +17,7 @@ from app.services.knowledge_service import (
 )
 from app.services.rag_service import (
     generate_ticket_report,
+    get_analysis_status,
     get_latest_report,
     get_ticket_summary,
     run_ticket_analysis,
@@ -67,19 +69,63 @@ def upload_tickets(
 
 
 @router.post("/tickets/{batch_id}/analyze", response_model=AnalyzeResponse)
-def analyze_tickets(batch_id: int, db: Session = Depends(get_db)):
+def analyze_tickets(
+    batch_id: int,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+):
     batch = get_ticket_batch(db, batch_id)
     if not batch:
         raise HTTPException(status_code=404, detail="Ticket batch not found.")
 
-    result = run_ticket_analysis(db, batch_id)
+    if batch.status == "processing":
+        result = get_analysis_status(db, batch_id)
+        return AnalyzeResponse(
+            batch_id=batch_id,
+            status=batch.status,
+            analyzed_count=result.analyzed_count,
+            failed_count=result.failed_count,
+        )
+
+    batch.status = "processing"
+    db.commit()
+    background_tasks.add_task(run_ticket_analysis_background, batch_id)
+
+    return AnalyzeResponse(
+        batch_id=batch_id,
+        status=batch.status,
+        analyzed_count=0,
+        failed_count=0,
+    )
+
+
+@router.get("/tickets/{batch_id}/analyze/status", response_model=AnalyzeResponse)
+def get_analyze_status(batch_id: int, db: Session = Depends(get_db)):
     batch = get_ticket_batch(db, batch_id)
+    if not batch:
+        raise HTTPException(status_code=404, detail="Ticket batch not found.")
+
+    result = get_analysis_status(db, batch_id)
     return AnalyzeResponse(
         batch_id=batch_id,
         status=batch.status,
         analyzed_count=result.analyzed_count,
         failed_count=result.failed_count,
     )
+
+
+def run_ticket_analysis_background(batch_id: int) -> None:
+    db = SessionLocal()
+    try:
+        run_ticket_analysis(db, batch_id)
+    except Exception:
+        batch = db.get(TicketBatch, batch_id)
+        if batch:
+            batch.status = "failed"
+            db.commit()
+        raise
+    finally:
+        db.close()
 
 
 @router.get("/tickets/{batch_id}/summary", response_model=TicketSummaryResponse)
