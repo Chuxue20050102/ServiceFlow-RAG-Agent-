@@ -2,6 +2,10 @@
 
 ServiceFlow RAG Agent 是一个面向客服 / 售后场景的 AI 工单分析系统。用户可以上传售后规则、FAQ、处理流程等知识文档，再上传 Excel / CSV 工单批次；系统会基于 RAG 检索相关规则，并调用大模型生成工单分类、严重程度、责任团队、处理建议和客服回复模板。
 
+## 项目截图
+
+![ServiceFlow 分析结果](docs/images/serviceflow-result.png)
+
 ## 1. 架构说明
 
 - 前端：`frontend_vue/`，Vue 3 + Vite
